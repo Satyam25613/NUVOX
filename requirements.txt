@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+gunicorn
+python-multipart
+pdfplumber
+google-genai
+python-dotenv
+websockets
