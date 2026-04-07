@@ -59,4 +59,4 @@ jobs:
           app-name: 'nuvox-interview'
           slot-name: 'Production'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_37CB86CFDF3749F2822CD78D5EF928C0 }}
-          startup-command: 'gunicorn main:app --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout 120 --workers 1'
+          
