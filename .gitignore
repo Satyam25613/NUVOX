@@ -1,0 +1,11 @@
+.env
+venv/
+node_modules/
+local_db.json
+__pycache__/
+*.pyc
+.DS_Store
+*.log
+*.pdf
+*.zip
+backend.zip

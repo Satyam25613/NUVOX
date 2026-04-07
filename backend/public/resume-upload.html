@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NUVOX — Upload Resume</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <a href="index.html" class="logo">
+            <div class="logo-icon">N</div>
+            <span>NUVOX</span>
+        </a>
+        <div class="navbar-links">
+            <a href="dashboard.html">Dashboard</a>
+            <a href="resume-upload.html" class="active">Upload</a>
+            <a href="persona-selection.html">Interview</a>
+        </div>
+    </nav>
+
+    <div class="page-content" style="max-width:600px;">
+        <!-- Step Indicator -->
+        <div class="step-row animate-up">
+            <div class="step active">
+                <div class="step-dot">1</div><span>Upload Resume</span>
+            </div>
+            <div class="step-line"></div>
+            <div class="step">
+                <div class="step-dot">2</div><span>Select Persona</span>
+            </div>
+            <div class="step-line"></div>
+            <div class="step">
+                <div class="step-dot">3</div><span>Interview</span>
+            </div>
+        </div>
+
+        <div class="glass-card animate-up-1" id="upload-section" style="padding:32px;">
+            <h2 class="mb-2">Upload Your Resume</h2>
+            <p class="mb-6">We'll personalise your interview questions based on your experience.</p>
+
+            <!-- Drop Zone -->
+            <div class="upload-zone" id="drop-zone">
+                <input type="file" id="file-input" accept=".pdf" />
+                <div class="upload-icon">
+                    <svg width="24" height="24" fill="none" stroke="#60A5FA" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                </div>
+                <p style="font-weight:600;font-size:0.95rem;color:var(--text);">Drop PDF here or click to browse</p>
+                <p class="mt-1" style="font-size:0.78rem;color:var(--muted);">PDF only · Max 10MB</p>
+                <div id="file-name" class="mt-3 hidden">
+                    <span class="badge badge-blue" id="file-name-text"></span>
+                </div>
+            </div>
+
+            <!-- Error -->
+            <div id="error-banner" class="banner banner-red mt-4 hidden">
+                <span class="banner-icon">⚠</span>
+                <span id="error-text"></span>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading-state" class="mt-6 text-center hidden">
+                <div class="spinner mb-4"></div>
+                <p>Parsing resume with AI...</p>
+            </div>
+
+            <!-- Success: Parsed Skills -->
+            <div id="success-state" class="mt-4 hidden">
+                <div class="banner banner-green mb-4">
+                    <span class="banner-icon">✓</span>
+                    <span>Resume parsed successfully!</span>
+                </div>
+                <h3 class="mb-2">Detected Skills</h3>
+                <div id="skills-list" class="flex gap-2 mb-4" style="flex-wrap:wrap;"></div>
+                <h3 class="mb-2">Projects</h3>
+                <div id="projects-list" class="flex gap-2" style="flex-wrap:wrap;"></div>
+            </div>
+
+            <hr class="divider mt-6" />
+
+            <div class="flex gap-3 mt-4" style="flex-wrap:wrap;">
+                <button class="btn-primary" id="upload-btn" onclick="uploadResume()" disabled>
+                    Upload & Continue →
+                </button>
+                <button class="btn-ghost" onclick="skipUpload()">Skip — choose persona without resume</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = window.location.origin;
+        const NGROK_HEADERS = { 'ngrok-skip-browser-warning': 'true' };
+        let selectedFile = null;
+
+        // File selection
+        const fileInput = document.getElementById('file-input');
+        const dropZone = document.getElementById('drop-zone');
+        const uploadBtn = document.getElementById('upload-btn');
+
+        fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            handleFile(e.dataTransfer.files[0]);
+        });
+
+        function handleFile(file) {
+            if (!file) return;
+            if (!file.name.endsWith('.pdf')) {
+                showError('Only PDF files are accepted.');
+                return;
+            }
+            selectedFile = file;
+            document.getElementById('file-name-text').textContent = file.name;
+            document.getElementById('file-name').classList.remove('hidden');
+            uploadBtn.disabled = false;
+            hideError();
+        }
+
+        async function uploadResume() {
+            if (!selectedFile) return;
+            uploadBtn.disabled = true;
+            show('loading-state');
+            hide('success-state');
+            hideError();
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            try {
+                const res = await fetch(`${API}/api/upload-resume`, { method: 'POST', body: formData, headers: { ...NGROK_HEADERS } })
+                    .catch(() => { throw new Error('Cannot connect to NUVOX server. Make sure uvicorn is running on port 8000.'); });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Upload failed');
+
+                localStorage.setItem('nuvox_resume_id', data.resume_id);
+
+                // Show parsed result
+                hide('loading-state');
+                show('success-state');
+                renderBadges('skills-list', data.skills, 'badge-blue');
+                renderBadges('projects-list', data.projects, 'badge-green');
+                uploadBtn.textContent = 'Continue →';
+                uploadBtn.disabled = false;
+                uploadBtn.onclick = () => window.location.href = 'persona-selection.html';
+            } catch (err) {
+                hide('loading-state');
+                uploadBtn.disabled = false;
+                showError(err.message);
+            }
+        }
+
+        function skipUpload() {
+            localStorage.removeItem('nuvox_resume_id');
+            window.location.href = 'persona-selection.html';
+        }
+
+        function renderBadges(id, items, cls) {
+            const el = document.getElementById(id);
+            el.innerHTML = '';
+            (items || []).slice(0, 12).forEach(item => {
+                const b = document.createElement('span');
+                b.className = `badge ${cls}`;
+                b.textContent = item;
+                el.appendChild(b);
+            });
+            if (!items || items.length === 0) el.innerHTML = '<small>None detected</small>';
+        }
+
+        function show(id) { document.getElementById(id).classList.remove('hidden'); }
+        function hide(id) { document.getElementById(id).classList.add('hidden'); }
+        function showError(msg) { document.getElementById('error-text').textContent = msg; show('error-banner'); }
+        function hideError() { hide('error-banner'); }
+    </script>
+</body>
+
+</html>

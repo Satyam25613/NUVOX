@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NUVOX — Interview Report</title>
+    <meta name="description" content="Your personalised NUVOX interview performance report with AI feedback." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+    <style>
+        /* ── Report page specific ─────────────────────────────── */
+        .report-header-section {
+            text-align: center;
+            padding: 48px 0 40px;
+            animation: fade-up 0.6s ease both;
+        }
+
+        .report-logo {
+            font-family: var(--font-display);
+            font-size: 1.4rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, #94A3B8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.04em;
+            margin-bottom: 24px;
+        }
+
+        .report-title {
+            font-family: var(--font-display);
+            font-size: 2.4rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        .report-subtitle {
+            font-size: 0.92rem;
+            color: var(--muted);
+            margin-bottom: 24px;
+        }
+
+        .overall-score-display {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 252, 245, 0.70);
+            border: 1px solid rgba(180, 150, 100, 0.25);
+            border-radius: 20px;
+            padding: 20px 40px;
+            gap: 4px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 2px 0 rgba(255, 255, 255, 0.90) inset, 0 4px 20px rgba(140, 110, 70, 0.06);
+        }
+
+        .overall-score-number {
+            font-family: var(--font-display);
+            font-size: 3rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .overall-score-label {
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        /* ── Score cards row ────────────────────────────────────── */
+        .score-cards-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+            margin-bottom: 28px;
+            animation: fade-up 0.6s 0.1s ease both;
+        }
+
+        @media (min-width: 640px) {
+            .score-cards-row {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        .score-card-v2 {
+            background: rgba(255, 252, 245, 0.70);
+            border: 1px solid rgba(180, 150, 100, 0.22);
+            border-radius: 16px;
+            padding: 24px 16px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 2px 0 rgba(255, 255, 255, 0.90) inset, 0 4px 16px rgba(140, 110, 70, 0.06);
+        }
+
+        .score-card-v2:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 0 rgba(255, 255, 255, 0.90) inset, 0 12px 40px rgba(140, 110, 70, 0.10);
+        }
+
+        .score-name {
+            font-family: var(--font-display);
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--text);
+            text-align: center;
+            letter-spacing: 0.02em;
+        }
+
+        .score-number {
+            font-family: var(--font-display);
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .score-bar-track {
+            width: 100%;
+            height: 5px;
+            border-radius: 999px;
+            background: rgba(180, 150, 100, 0.15);
+            overflow: hidden;
+        }
+
+        .score-bar-fill {
+            height: 100%;
+            border-radius: 999px;
+            transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ── Feedback section ──────────────────────────────────── */
+        .feedback-section {
+            background: rgba(255, 252, 245, 0.72);
+            border: 1px solid rgba(180, 150, 100, 0.22);
+            border-radius: 16px;
+            padding: 28px 32px;
+            margin-bottom: 24px;
+            animation: fade-up 0.6s 0.2s ease both;
+            backdrop-filter: blur(24px);
+            box-shadow: 0 2px 0 rgba(255, 255, 255, 0.90) inset, 0 4px 16px rgba(140, 110, 70, 0.06);
+        }
+
+        .section-heading {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 16px;
+        }
+
+        .feedback-body {
+            font-family: var(--font-body);
+            font-size: 0.95rem;
+            color: var(--text-secondary, #5c4a2a);
+            line-height: 1.85;
+        }
+
+        /* ── Improvements ──────────────────────────────────────── */
+        .improve-grid {
+            display: grid;
+            gap: 10px;
+        }
+
+        .improve-pill {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            background: rgba(217, 119, 6, 0.07);
+            border: 1px solid rgba(217, 119, 6, 0.22);
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 0.88rem;
+            color: #92400e;
+            line-height: 1.55;
+        }
+
+        .improve-icon {
+            font-size: 1rem;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        /* ── Topic chips ───────────────────────────────────────── */
+        .topics-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .topic-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(37, 99, 235, 0.07);
+            border: 1px solid rgba(37, 99, 235, 0.22);
+            border-radius: 999px;
+            padding: 7px 16px;
+            font-family: var(--font-mono, 'DM Mono', monospace);
+            font-size: 0.78rem;
+            color: #1d4ed8;
+            font-weight: 500;
+        }
+
+        .topic-icon {
+            font-size: 0.9rem;
+        }
+
+        /* ── Two column layout ─────────────────────────────────── */
+        .two-section-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            margin-bottom: 28px;
+            animation: fade-up 0.6s 0.3s ease both;
+        }
+
+        @media (min-width: 680px) {
+            .two-section-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        /* ── Actions ───────────────────────────────────────────── */
+        .report-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 8px;
+            padding-bottom: 60px;
+            animation: fade-up 0.6s 0.4s ease both;
+        }
+
+        /* ── Loading & error ───────────────────────────────────── */
+        .report-load-center {
+            min-height: 60vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            text-align: center;
+            padding: 60px 24px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <a href="index.html" class="logo">
+            <div class="logo-icon">N</div><span>NUVOX</span>
+        </a>
+        <div class="navbar-links">
+            <a href="dashboard.html">Dashboard</a>
+            <a href="resume-upload.html">New Interview</a>
+        </div>
+    </nav>
+
+    <div class="page-content" style="max-width:900px;">
+
+        <!-- Loading -->
+        <div id="state-loading" class="report-load-center">
+            <div class="spinner mb-4"></div>
+            <h2 class="mb-2">Loading Report</h2>
+            <p>Fetching your performance analysis…</p>
+        </div>
+
+        <!-- Error -->
+        <div id="state-error" class="hidden report-load-center">
+            <div class="banner banner-red" style="max-width:480px;text-align:left;">
+                <span class="banner-icon">⚠</span>
+                <span id="error-text">Failed to load report.</span>
+            </div>
+            <div style="display:flex;gap:12px;margin-top:20px;">
+                <button class="btn-secondary" onclick="window.location.reload()">Retry</button>
+                <button class="btn-secondary" onclick="window.location.href='index.html'">Go Home</button>
+            </div>
+        </div>
+
+        <!-- Report Content -->
+        <div id="state-report" class="hidden">
+
+            <!-- Section 1: Header -->
+            <div class="report-header-section">
+                <div class="report-logo">NUVOX</div>
+                <h1 class="report-title">Interview Report</h1>
+                <p class="report-subtitle" id="report-meta">Loading…</p>
+                <div class="overall-score-display">
+                    <div class="overall-score-number" id="overall-score-num" style="color:#fff;">—</div>
+                    <div class="overall-score-label">Overall Score / 10</div>
+                </div>
+            </div>
+
+            <!-- Section 2: Score Cards (4 in a row) -->
+            <div class="score-cards-row" id="score-cards-row"></div>
+
+            <!-- Section 3: Overall Feedback -->
+            <div class="feedback-section">
+                <div class="section-heading">Overall Feedback</div>
+                <p class="feedback-body" id="overall-feedback">—</p>
+            </div>
+
+            <!-- Section 4 & 5: Improvements + Topics -->
+            <div class="two-section-grid">
+                <!-- Section 4: Areas to Improve -->
+                <div class="feedback-section" style="margin-bottom:0;animation:none;">
+                    <div class="section-heading" style="color:#FCD34D;">⚠ Areas to Improve</div>
+                    <div class="improve-grid" id="improvements-list"></div>
+                </div>
+
+                <!-- Section 5: Strengths -->
+                <div class="feedback-section" style="margin-bottom:0;animation:none;">
+                    <div class="section-heading" style="color:#7DD3FC;">🚀 Key Strengths</div>
+                    <div class="topics-wrap" id="topics-list"></div>
+                </div>
+            </div>
+
+            <!-- Section 6: Actions -->
+            <div class="report-actions">
+                <button class="btn-primary" onclick="window.location.href='resume-upload.html'">
+                    Start New Interview →
+                </button>
+                <button class="btn-secondary" onclick="window.location.href='dashboard.html'">
+                    Go to Dashboard
+                </button>
+            </div>
+
+        </div><!-- /state-report -->
+
+    </div>
+
+    <script>
+        const API = window.location.origin;
+        const NGROK_HEADERS = { 'ngrok-skip-browser-warning': 'true' };
+
+        // Get interview ID from query param (preferred) or localStorage fallback
+        const params = new URLSearchParams(window.location.search);
+        const interviewId = params.get('id') || localStorage.getItem('nuvox_interview_id');
+
+        if (!interviewId) { window.location.href = 'index.html'; }
+
+        // Persona label from localStorage
+        const personaRaw = localStorage.getItem('nuvox_persona') || 'general';
+        const personaLabel = personaRaw.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+        // Score colour rules: 8-10 green, 5-7 blue, 1-4 red
+        function scoreColor(n) {
+            if (n >= 8) return '#22c55e';
+            if (n >= 5) return '#0ea5ff';
+            return '#ff4d6d';
+        }
+
+        async function fetchReport() {
+            try {
+                const res = await fetch(`${API}/api/report/${interviewId}`, { headers: { ...NGROK_HEADERS } })
+                    .catch(() => { throw new Error('Cannot reach NUVOX server. Make sure uvicorn is running on port 8000.'); });
+                if (res.ok) {
+                    const data = await res.json();
+                    renderReport(data);
+                    return;
+                }
+                if (res.status === 404) {
+                    throw new Error('Report is not available yet. Please go back and try again.');
+                }
+                throw new Error(`Report fetch failed: ${res.status}`);
+            } catch (err) {
+                showError(err.message || 'Failed to load report.');
+            }
+        }
+
+        function renderReport(data) {
+            const scores = [
+                { label: 'Communication', score: data.communication_score },
+                { label: 'Technical', score: data.technical_score },
+                { label: 'Confidence', score: data.confidence_score },
+                { label: 'Problem Solving', score: data.problem_solving_score },
+            ];
+
+            const avg = Math.round(scores.reduce((s, c) => s + c.score, 0) / scores.length);
+            const avgColor = scoreColor(avg);
+
+            // Header
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+            document.getElementById('report-meta').textContent =
+                `${personaLabel} · ${dateStr} · Mock Session`;
+            const overallEl = document.getElementById('overall-score-num');
+            overallEl.textContent = `${avg}/10`;
+            overallEl.style.color = avgColor;
+
+            // Also update history with the score
+            updateHistoryScore(avg);
+
+            // Section 2: Score cards
+            const row = document.getElementById('score-cards-row');
+            row.innerHTML = '';
+            scores.forEach((s) => {
+                const c = scoreColor(s.score);
+                const pct = (s.score / 10 * 100).toFixed(0);
+                const card = document.createElement('div');
+                card.className = 'score-card-v2';
+                card.innerHTML = `
+                    <div class="score-name">${s.label}</div>
+                    <div class="score-number" style="color:${c};">${s.score}<span style="font-size:1rem;color:var(--muted);font-weight:500;">/10</span></div>
+                    <div class="score-bar-track" style="width:100%;">
+                        <div class="score-bar-fill" id="bar-${s.label.replace(/\s/g, '')}" style="width:0%;background:${c};"></div>
+                    </div>
+                `;
+                row.appendChild(card);
+                // Animate bar fill
+                requestAnimationFrame(() => {
+                    setTimeout(() => {
+                        const fill = document.getElementById(`bar-${s.label.replace(/\s/g, '')}`);
+                        if (fill) fill.style.width = `${pct}%`;
+                    }, 100);
+                });
+            });
+
+            // Section 3: Feedback
+            document.getElementById('overall-feedback').textContent =
+                data.overall_feedback || 'No feedback available.';
+
+            // Section 4: Improvements
+            const impEl = document.getElementById('improvements-list');
+            (data.areas_of_improvement || []).forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'improve-pill';
+                div.innerHTML = `<span class="improve-icon">⚠</span><span>${item}</span>`;
+                impEl.appendChild(div);
+            });
+            if (!data.areas_of_improvement || data.areas_of_improvement.length === 0) {
+                impEl.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">No areas identified.</p>';
+            }
+
+            // Section 5: Topics
+            const topEl = document.getElementById('topics-list');
+            (data.suggested_topics || []).forEach(item => {
+                const chip = document.createElement('div');
+                chip.className = 'topic-chip';
+                chip.innerHTML = `<span class="topic-icon">📖</span>${item}`;
+                topEl.appendChild(chip);
+            });
+            if (!data.suggested_topics || data.suggested_topics.length === 0) {
+                topEl.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">No topics suggested.</p>';
+            }
+
+            // Show report
+            document.getElementById('state-loading').classList.add('hidden');
+            document.getElementById('state-report').classList.remove('hidden');
+        }
+
+        function updateHistoryScore(avg) {
+            try {
+                const history = JSON.parse(localStorage.getItem('nuvox_history') || '[]');
+                const entry = history.find(h => h.interview_id === interviewId);
+                if (entry) {
+                    entry.score = avg;
+                    localStorage.setItem('nuvox_history', JSON.stringify(history));
+                }
+            } catch (e) { /* ignore */ }
+        }
+
+        function showError(msg) {
+            document.getElementById('state-loading').classList.add('hidden');
+            document.getElementById('state-error').classList.remove('hidden');
+            document.getElementById('error-text').textContent = msg;
+        }
+
+        // Run
+        fetchReport();
+    </script>
+
+</body>
+
+</html>

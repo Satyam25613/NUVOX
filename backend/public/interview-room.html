@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NUVOX — Live Interview</title>
+    <meta name="description" content="NUVOX AI live voice interview session." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+    <div id="interview-page">
+
+        <!-- Header -->
+        <div class="interview-header animate-up">
+            <div style="font-family:var(--font-display);font-size:1.2rem;font-weight:800;color:#fff;">NUVOX</div>
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div class="q-counter">Q <span id="q-count">0</span> / 12</div>
+                <div class="timer-display" id="timer">15:00</div>
+            </div>
+        </div>
+
+        <!-- Body -->
+        <div class="interview-body">
+
+            <!-- Splash: Click to Start (required for AudioContext unlock) -->
+            <div id="state-splash" class="text-center animate-up">
+                <div class="ai-orb-wrapper" style="margin-bottom:32px;">
+                    <div class="orb-ring"></div>
+                    <div class="ai-orb"></div>
+                </div>
+                <h2 class="mb-2">Ready to Begin?</h2>
+                <p style="color:#94A3B8;margin-bottom:32px;">Click the button below to start your AI interview
+                    session.<br>Make sure your microphone is plugged in.</p>
+                <button class="btn-primary" style="padding:16px 48px;font-size:1.1rem;" id="start-btn"
+                    onclick="startSession()">
+                    Start Session →
+                </button>
+            </div>
+
+            <!-- Connecting State -->
+            <div id="state-connecting" class="hidden text-center animate-up">
+                <div class="spinner mb-4"></div>
+                <h2 class="mb-2">Connecting...</h2>
+                <p>Requesting microphone access and connecting to AI interviewer.</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="state-error" class="hidden text-center animate-up">
+                <div class="banner banner-red" style="max-width:500px;text-align:left;margin:0 auto 24px;">
+                    <span class="banner-icon">⚠</span>
+                    <span id="error-text">Connection error.</span>
+                </div>
+                <button class="btn-secondary" onclick="window.location.href='persona-selection.html'">← Try
+                    Again</button>
+            </div>
+
+            <!-- Active Interview -->
+            <div id="state-active" class="hidden"
+                style="width:100%;display:flex;flex-direction:column;align-items:center;">
+
+                <!-- AI Orb -->
+                <div class="ai-orb-wrapper animate-up-1">
+                    <div class="orb-ring"></div>
+                    <div class="ai-orb" id="ai-orb"></div>
+                </div>
+
+                <!-- Status + Question -->
+                <div class="glass-card ai-question-card animate-up-2">
+                    <div id="status-badge" class="status-badge-inline listening">● Listening</div>
+                    <p id="question-text" style="color:#94A3B8;margin-top:12px;">Waiting for the interviewer to
+                        speak...</p>
+                </div>
+
+                <!-- Controls -->
+                <div class="interview-controls animate-up-3">
+                    <div class="controls-row">
+                        <button class="btn-secondary" style="padding:10px 24px;border-radius:30px;" id="end-btn"
+                            onclick="endInterview()">
+                            End Session
+                        </button>
+
+                        <button class="mic-btn hold-to-speak-btn" id="mic-btn"
+                            style="width: auto; padding: 0 24px; border-radius: 30px; display: flex; align-items: center; gap: 8px;">
+                            <svg class="mic-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                style="width:20px;height:20px;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" id="mic-path"
+                                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 016 0v6a3 3 0 01-3 3z" />
+                            </svg>
+                            <span style="font-weight:600; font-family:var(--font-body); pointer-events:none;">Hold to
+                                Speak</span>
+                        </button>
+
+                        <div style="width:108px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Text Mode Fallback -->
+            <div id="state-text-mode" class="hidden" style="width:100%;max-width:600px;margin:0 auto;">
+                <div class="banner banner-amber" style="margin-bottom:20px;">
+                    <span class="banner-icon">⚡</span>
+                    <span>Voice unstable. Switched to text mode — type your answers below.</span>
+                </div>
+                <div class="glass-card" style="padding:24px;margin-bottom:16px;">
+                    <div id="text-status-badge" class="status-badge-inline speaking" style="margin-bottom:12px;">● AI Question</div>
+                    <p id="text-question" style="color:#F1F5F9;font-style:italic;line-height:1.6;">Loading first question...</p>
+                </div>
+                <div style="display:flex;gap:10px;">
+                    <input type="text" id="text-answer-input" class="input-field" placeholder="Type your answer..." 
+                           style="background:rgba(255,255,255,0.06);color:#F1F5F9;border-color:rgba(255,255,255,0.15);flex:1;"
+                           onkeydown="if(event.key==='Enter')sendTextAnswer()" />
+                    <button class="btn-primary" style="padding:12px 24px;white-space:nowrap;" onclick="sendTextAnswer()">Send →</button>
+                </div>
+                <div style="display:flex;gap:12px;margin-top:16px;justify-content:space-between;align-items:center;">
+                    <div class="q-counter" style="color:#94A3B8;">Q <span id="text-q-count">1</span> / 12</div>
+                    <button class="btn-secondary" style="padding:8px 20px;border-radius:20px;" onclick="endInterview()">End Interview</button>
+                </div>
+            </div>
+
+            <!-- Generating Report State -->
+            <div id="state-ending" class="hidden text-center animate-up">
+                <div class="spinner mb-4"></div>
+                <h2 class="mb-2">Interview Complete</h2>
+                <p id="ending-text">Generating your performance report...</p>
+                <div id="retry-btn-wrap" class="hidden mt-4" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+                    <button class="btn-secondary" onclick="retryReport()">Retry Report</button>
+                    <button class="btn-secondary" onclick="window.location.href='dashboard.html'">Go to Dashboard</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <style>
+        .status-badge-inline {
+            display: inline-block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-family: var(--font-body);
+        }
+
+        .status-badge-inline.listening {
+            background: rgba(74, 222, 128, 0.12);
+            color: #4ade80;
+        }
+
+        .status-badge-inline.speaking {
+            background: rgba(96, 165, 250, 0.12);
+            color: #60a5fa;
+        }
+
+        .status-badge-inline.muted {
+            background: rgba(248, 113, 113, 0.12);
+            color: #f87171;
+        }
+
+        .status-badge-inline.thinking {
+            background: rgba(167, 139, 250, 0.12);
+            color: #a78bfa;
+        }
+
+        .hold-to-speak-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #F1F5F9;
+            transition: all 0.2s ease;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .hold-to-speak-btn:active,
+        .hold-to-speak-btn.active-hold {
+            background: rgba(74, 222, 128, 0.2) !important;
+            border-color: #4ade80 !important;
+            color: #4ade80 !important;
+            transform: scale(0.96);
+        }
+    </style>
+
+    <script>
+        'use strict';
+
+        // ── Config ─────────────────────────────────────────────────────────
+        // Dynamic URL detection: works on localhost, ngrok, LAN IP, etc.
+        const _origin = window.location.origin;  // e.g. https://xxxx.ngrok-free.app or http://localhost:8000
+        const API_BASE = _origin;
+        const WS_BASE  = _origin.replace(/^http/, 'ws');  // http→ws, https→wss
+        const MIC_SR = 16000;   // Target: Gemini input 16kHz
+        const OUT_SR = 24000;   // Gemini output: 24kHz
+        // Ngrok free tier requires this header to skip interstitial page
+        const NGROK_HEADERS = { 'ngrok-skip-browser-warning': 'true' };
+
+        // ── Guard ───────────────────────────────────────────────────────────
+        const interviewId = localStorage.getItem('nuvox_interview_id');
+        if (!interviewId) { window.location.href = 'persona-selection.html'; }
+
+        // ── Global State ────────────────────────────────────────────────────
+        let ws = null;
+        let micStream = null;
+        let isMuted = false;
+        let aiIsSpeaking = false;
+        let sessionEnded = false;
+        let questionCount = 0;
+
+        // ── ONE AudioContext — created once on page load never recreated ───
+        // (created inside click handler to bypass autoplay policy)
+        let audioCtx = null;
+
+        // ── Transcript & Silence state ──────────────────────────────────────
+        const transcriptLog = [];
+        let silenceTimer = null;
+        let hasSpokenThisTurn = false;
+        let userStartedSpeaking = false;
+        let userSpokeAt = 0;
+        let userSpokeForMs = 0;
+        const SILENCE_THRESHOLD = 0.015;
+        const SILENCE_DELAY = 1200;   // 1.2 seconds of silence = done speaking
+        const MIN_SPEECH_DURATION = 600;
+
+        function getRMSVolume(audioBuffer) {
+            const data = audioBuffer.getChannelData(0);
+            let sum = 0;
+            for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
+            return Math.sqrt(sum / data.length);
+        }
+
+        // ── Active audio schedule ──────────────────────────────────────────
+        let nextPlayTime = 0;
+        let activeSources = [];
+        let aiSpeakingSafetyTimer = null;
+        const AI_SPEAKING_SAFETY_TIMEOUT = 30000; // 30 seconds max for AI speaking
+
+        // ── Timer ──────────────────────────────────────────────────────────
+        let timerSecs = 900;
+        let timerHandle = null;
+
+        function startTimer() {
+            timerHandle = setInterval(() => {
+                if (--timerSecs <= 0) { endInterview(); return; }
+                const m = Math.floor(timerSecs / 60);
+                const s = timerSecs % 60;
+                const el = document.getElementById('timer');
+                el.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                el.className = timerSecs <= 60 ? 'timer-display critical'
+                    : timerSecs <= 120 ? 'timer-display warning'
+                        : 'timer-display';
+            }, 1000);
+        }
+
+        // ── PCM decode (exact spec from master prompt) ─────────────────────
+        function decodePCM(bytes) {
+            const i16 = new Int16Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 2);
+            const f32 = new Float32Array(i16.length);
+            for (let i = 0; i < i16.length; i++) f32[i] = i16[i] / 32768;
+            const buf = audioCtx.createBuffer(1, f32.length, OUT_SR);
+            buf.copyToChannel(f32, 0);
+            return buf;
+        }
+
+        // ── Float32 → PCM16 LE (mic send) — SYNCHRONOUS ───────────────────
+        function float32ToPCM16(floats) {
+            const buf = new ArrayBuffer(floats.length * 2);
+            const view = new DataView(buf);
+            for (let i = 0; i < floats.length; i++) {
+                const s = Math.max(-1, Math.min(1, floats[i]));
+                view.setInt16(i * 2, s < 0 ? s * 32768 : s * 32767, true);
+            }
+            return buf;
+        }
+
+        // ── SYNCHRONOUS linear-interpolation downsampler ──────────────────
+        function downsampleLinear(input, sourceSR, targetSR) {
+            if (sourceSR === targetSR) return input;
+            const ratio = sourceSR / targetSR;
+            const outLen = Math.floor(input.length / ratio);
+            const output = new Float32Array(outLen);
+            for (let i = 0; i < outLen; i++) {
+                const pos = i * ratio;
+                const idx = Math.floor(pos);
+                const frac = pos - idx;
+                const a = input[idx] ?? 0;
+                const b = input[idx + 1] ?? a;
+                output[i] = a + frac * (b - a);
+            }
+            return output;
+        }
+
+        // ── Seamless Playback Scheduling ──────────────────────────────────
+        function enqueueAudio(bytes) {
+            if (!audioCtx || bytes.byteLength < 2) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            let buf;
+            try { buf = decodePCM(bytes); } catch (e) { return; }
+
+            const source = audioCtx.createBufferSource();
+            source.buffer = buf;
+            source.connect(audioCtx.destination);
+
+            // If we drifted behind, schedule slightly in the future to buffer
+            if (nextPlayTime < audioCtx.currentTime) {
+                nextPlayTime = audioCtx.currentTime + 0.05;
+            }
+
+            source.start(nextPlayTime);
+            nextPlayTime += buf.duration;
+            activeSources.push(source);
+
+            aiIsSpeaking = true;
+            setUIState('speaking');
+
+            // Safety timeout: force-unlock mic if onended never fires
+            if (aiSpeakingSafetyTimer) clearTimeout(aiSpeakingSafetyTimer);
+            aiSpeakingSafetyTimer = setTimeout(() => {
+                if (aiIsSpeaking) {
+                    console.warn('[NUVOX] Safety timeout: forcing aiIsSpeaking=false');
+                    aiIsSpeaking = false;
+                    activeSources = [];
+                    setUIState('listening');
+                }
+            }, AI_SPEAKING_SAFETY_TIMEOUT);
+
+            source.onended = () => {
+                const idx = activeSources.indexOf(source);
+                if (idx > -1) activeSources.splice(idx, 1);
+
+                // If queue drains out, go back to listening mode
+                if (activeSources.length === 0) {
+                    aiIsSpeaking = false;
+                    if (aiSpeakingSafetyTimer) {
+                        clearTimeout(aiSpeakingSafetyTimer);
+                        aiSpeakingSafetyTimer = null;
+                    }
+                    setUIState('listening');
+                    questionCount++;
+                    document.getElementById('q-count').textContent = questionCount;
+                    console.log('[NUVOX] AI finished speaking — mic unlocked, listening for user');
+                }
+            };
+        }
+
+        function stopAudioPlayback() {
+            activeSources.forEach(s => { try { s.stop(); } catch (e) { } });
+            activeSources = [];
+            nextPlayTime = 0;
+            aiIsSpeaking = false;
+            hasSpokenThisTurn = false;
+            userStartedSpeaking = false;
+            userSpokeForMs = 0;
+            setUIState('listening');
+        }
+
+        // ── User Speech-to-Text (Polyfill for report generation) ───────────
+        let recognition = null;
+        function startSpeechToText() {
+            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (SpeechRec && !recognition) {
+                recognition = new SpeechRec();
+                recognition.continuous = true;
+                recognition.interimResults = false;
+                recognition.onresult = (e) => {
+                    const text = e.results[e.results.length - 1][0].transcript.trim();
+                    if (text) transcriptLog.push({ role: 'user', text: text, time: Date.now() });
+                };
+                recognition.onend = () => {
+                    if (!sessionEnded) {
+                        try { recognition.start(); } catch (e) { }
+                    }
+                };
+                try { recognition.start(); } catch (e) { }
+            }
+        }
+
+        // ── Microphone capture (ScriptProcessor, synchronous resampling) ───
+        let nativeAudioCtx = null;
+        let scriptProc = null;
+
+        async function startMicCapture() {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+            });
+            micStream = stream;
+
+            nativeAudioCtx = new AudioContext();
+            const nativeSR = nativeAudioCtx.sampleRate;
+            await nativeAudioCtx.resume();
+
+            console.log(`[NUVOX] Mic capture: native=${nativeSR}Hz → target=${MIC_SR}Hz`);
+
+            const source = nativeAudioCtx.createMediaStreamSource(stream);
+            scriptProc = nativeAudioCtx.createScriptProcessor(4096, 1, 1);
+
+            scriptProc.onaudioprocess = (e) => {
+                // ECHO PREVENTION: don't send mic while AI is speaking OR muted
+                if (isMuted || aiIsSpeaking) return;
+                if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+                const inputBuffer = e.inputBuffer;
+                const volume = getRMSVolume(inputBuffer);
+
+                // ALWAYS encode and send the bytes so Gemini flow isn't chopped
+                const raw = inputBuffer.getChannelData(0);
+                const resampled = downsampleLinear(raw, nativeSR, MIC_SR);
+                const pcm16 = float32ToPCM16(resampled);
+
+                if (pcm16.byteLength > 0) {
+                    ws.send(pcm16);
+                }
+
+                // Auto Silence Detection (enabled by default but hold-to-speak bypasses this)
+                if (volume > SILENCE_THRESHOLD) {
+                    // User is speaking
+                    if (!userStartedSpeaking) {
+                        userStartedSpeaking = true;
+                        userSpokeAt = Date.now();
+                        hasSpokenThisTurn = true;
+                    }
+                    userSpokeForMs = Date.now() - userSpokeAt;
+                    if (silenceTimer) {
+                        clearTimeout(silenceTimer);
+                        silenceTimer = null;
+                        setUIState('listening');
+                    }
+                } else if (userStartedSpeaking && userSpokeForMs > MIN_SPEECH_DURATION) {
+                    // User is silent
+                    if (!silenceTimer) {
+                        silenceTimer = setTimeout(() => {
+                            sendEndOfTurn();
+                        }, SILENCE_DELAY);
+                    }
+                }
+
+                // ── Orb Visualizer (Fix 8) ─────────────────────────
+                const orb = document.getElementById('ai-orb');
+                if (orb && !aiIsSpeaking && volume > 0.005) {
+                    // scale orb between 1.0 and 1.3 based on mic volume
+                    const scale = 1.0 + Math.min(volume * 10, 0.3);
+                    orb.style.transform = `scale(${scale})`;
+                } else if (orb && !aiIsSpeaking) {
+                    orb.style.transform = 'scale(1.0)';
+                }
+            };
+
+            source.connect(scriptProc);
+            scriptProc.connect(nativeAudioCtx.destination);
+
+            // Start capturing user words if available
+            startSpeechToText();
+        }
+
+        // ── Main entry (called on "Start Session" button click) ───────────
+        async function startSession() {
+            document.getElementById('start-btn').disabled = true;
+            document.getElementById('start-btn').textContent = 'Connecting...';
+
+            // ONE AudioContext created once here — never recreated
+            audioCtx = new AudioContext({ sampleRate: OUT_SR });
+            await audioCtx.resume();
+            console.log(`[NUVOX] AudioContext created. state=${audioCtx.state}`);
+
+            showState('connecting');
+
+            // Request mic permission
+            try {
+                await startMicCapture();
+            } catch (err) {
+                showError(err.name === 'NotAllowedError'
+                    ? 'Microphone permission denied. Please allow microphone access and reload.'
+                    : `Microphone error: ${err.message}`);
+                return;
+            }
+
+            // Open WebSocket (ngrok free tier: pass skip-warning as a subprotocol for WS)
+            ws = new WebSocket(`${WS_BASE}/ws/interview/${interviewId}`);
+            ws.binaryType = 'arraybuffer';
+
+            ws.onopen = () => {
+                console.log('[NUVOX] WebSocket connected');
+                showState('active');
+                startTimer();
+                // Wait for Gemini to speak first, don't set listening yet!
+                setUIState('thinking');
+            };
+
+            ws.onmessage = (evt) => {
+                if (evt.data instanceof ArrayBuffer) {
+                    // Binary = AI audio PCM16 @ 24kHz
+                    enqueueAudio(new Uint8Array(evt.data));
+                } else {
+                    try {
+                        const msg = JSON.parse(evt.data);
+                        if (msg.type === 'transcript' && msg.text) {
+                            setQuestion(msg.text);
+                            transcriptLog.push({
+                                role: msg.role || 'interviewer',
+                                text: msg.text,
+                                time: Date.now()
+                            });
+                        } else if (msg.type === 'session_end') {
+                            endInterview();
+                        } else if (msg.type === 'error') {
+                            showError(msg.message);
+                        }
+                    } catch (e) {
+                        // Not JSON — ignore
+                    }
+                }
+            };
+
+            ws.onerror = () => {
+                if (!sessionEnded) {
+                    console.warn('[NUVOX] WebSocket error — switching to text mode');
+                    switchToTextMode();
+                }
+            };
+
+            ws.onclose = (e) => {
+                console.log(`[NUVOX] WS closed code=${e.code}`);
+                if (!sessionEnded && (e.code === 1007 || e.code === 1006 || e.code === 1011)) {
+                    console.warn(`[NUVOX] WS error code ${e.code} — switching to text mode`);
+                    switchToTextMode();
+                }
+            };
+        }
+
+        // ── Text Mode Fallback ──────────────────────────────────────────
+        let textModeActive = false;
+        let textQuestionCount = 0;
+        let currentTextQuestion = '';
+
+        function switchToTextMode() {
+            if (textModeActive || sessionEnded) return;
+            textModeActive = true;
+
+            // Clean up voice resources
+            if (micStream) micStream.getTracks().forEach(t => t.stop());
+            if (scriptProc) { try { scriptProc.disconnect(); } catch(e) {} }
+            clearInterval(timerHandle);
+            stopAudioPlayback();
+
+            // Show text mode UI
+            showState('text-mode');
+
+            // Get the first question from the persona
+            const persona = localStorage.getItem('nuvox_persona') || 'software_developer';
+            const openingQuestions = {
+                'software_developer': 'Tell me about yourself and your technical background.',
+                'web_developer': 'Walk me through a web project you have built recently.',
+                'qa_engineer': 'Can you describe your experience with software testing?',
+                'marketing_specialist': 'Tell me about a marketing campaign or project you have worked on.',
+                'sales_executive': 'Sell me something — anything you choose. Go ahead.',
+                'product_manager': 'Tell me about a product or app you use daily and how you would improve it.',
+                'data_analyst': 'Walk me through a data project you have worked on and what insights you found.',
+            };
+
+            currentTextQuestion = openingQuestions[persona] || 'Tell me about yourself.';
+            textQuestionCount = 1;
+            document.getElementById('text-question').textContent = '"' + currentTextQuestion + '"';
+            document.getElementById('text-q-count').textContent = textQuestionCount;
+            document.getElementById('text-answer-input').focus();
+        }
+
+        async function sendTextAnswer() {
+            const input = document.getElementById('text-answer-input');
+            const answer = input.value.trim();
+            if (!answer) return;
+
+            input.value = '';
+            input.disabled = true;
+            document.getElementById('text-question').textContent = 'Thinking...';
+            document.getElementById('text-status-badge').textContent = '● Thinking...';
+            document.getElementById('text-status-badge').className = 'status-badge-inline thinking';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/interview-message`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...NGROK_HEADERS },
+                    body: JSON.stringify({
+                        interview_id: interviewId,
+                        question: currentTextQuestion,
+                        answer: answer,
+                    }),
+                });
+
+                const data = await res.json();
+
+                if (data.session_complete) {
+                    endInterview();
+                    return;
+                }
+
+                textQuestionCount = data.question_count + 1;
+                currentTextQuestion = data.next_question;
+                document.getElementById('text-question').textContent = '"' + currentTextQuestion + '"';
+                document.getElementById('text-q-count').textContent = textQuestionCount;
+                document.getElementById('text-status-badge').textContent = '● AI Question';
+                document.getElementById('text-status-badge').className = 'status-badge-inline speaking';
+
+                // Save to transcript log for report
+                transcriptLog.push({ role: 'interviewer', text: currentTextQuestion, time: Date.now() });
+                transcriptLog.push({ role: 'user', text: answer, time: Date.now() });
+
+            } catch (err) {
+                console.error('[NUVOX] Text mode error:', err);
+                document.getElementById('text-question').textContent = 'Error getting next question. Try again.';
+            }
+
+            input.disabled = false;
+            input.focus();
+        }
+
+        // ── Controls & Utilities ────────────────────────────────────────────
+
+        function sendEndOfTurn() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'end_of_turn' }));
+            }
+            setUIState('thinking');
+            hasSpokenThisTurn = false;
+            userStartedSpeaking = false;
+            userSpokeForMs = 0;
+            if (silenceTimer) {
+                clearTimeout(silenceTimer);
+                silenceTimer = null;
+            }
+        }
+
+        // Fix 4: Push-to-Talk fallback button overrides automatic mode
+        function setupHoldToSpeak() {
+            const micBtn = document.getElementById('mic-btn');
+            if (!micBtn) return;
+
+            const startSpeaking = (e) => {
+                if (e && e.cancelable) e.preventDefault();
+                if (aiIsSpeaking) stopAudioPlayback(); // let user interrupt
+
+                micBtn.classList.add('active-hold');
+                // Simulate speaking trigger for silence detection logic
+                hasSpokenThisTurn = true;
+                userStartedSpeaking = true;
+                userSpokeAt = Date.now();
+                if (silenceTimer) {
+                    clearTimeout(silenceTimer);
+                    silenceTimer = null;
+                }
+                setUIState('listening');
+            };
+
+            const stopSpeaking = (e) => {
+                if (e && e.cancelable) e.preventDefault();
+                micBtn.classList.remove('active-hold');
+                sendEndOfTurn();
+            };
+
+            // Attach events
+            micBtn.addEventListener('mousedown', startSpeaking, { passive: false });
+            micBtn.addEventListener('touchstart', startSpeaking, { passive: false });
+
+            window.addEventListener('mouseup', () => { if (micBtn.classList.contains('active-hold')) stopSpeaking(); });
+            window.addEventListener('touchend', () => { if (micBtn.classList.contains('active-hold')) stopSpeaking(); });
+        }
+
+        // Initialize hold-to-speak on document parse
+        document.addEventListener('DOMContentLoaded', setupHoldToSpeak);
+
+        function setQuestion(text) {
+            const el = document.getElementById('question-text');
+            el.style.color = '#F1F5F9';
+            el.style.fontStyle = 'italic';
+            el.textContent = `"${text}"`;
+        }
+
+        let lastState = '';
+        function setUIState(state) {
+            if (state === lastState) return;
+            lastState = state;
+
+            const orb = document.getElementById('ai-orb');
+            const badge = document.getElementById('status-badge');
+            if (!orb || !badge) return;
+
+            orb.classList.toggle('speaking', state === 'speaking');
+            orb.classList.toggle('thinking', state === 'thinking');
+            badge.className = `status-badge-inline ${state}`;
+
+            let label = '● Listening';
+            if (state === 'speaking') {
+                label = '● AI Speaking';
+                hasSpokenThisTurn = false;
+            }
+            if (state === 'muted') label = '● Muted';
+            if (state === 'thinking') label = '● Thinking...';
+            badge.textContent = label;
+        }
+
+        function showState(name) {
+            ['splash', 'connecting', 'error', 'active', 'ending', 'text-mode'].forEach(s => {
+                const el = document.getElementById(`state-${s}`);
+                if (el) el.classList.add('hidden');
+            });
+            const target = document.getElementById(`state-${name}`);
+            if (target) target.classList.remove('hidden');
+        }
+
+        function showError(msg) {
+            clearInterval(timerHandle);
+            stopAudioPlayback();
+            showState('error');
+            document.getElementById('error-text').textContent = msg;
+        }
+
+        // ── End Interview — FIXED race condition ──────────────────────────
+        let _reportInterviewId = null;
+
+        async function endInterview() {
+            if (sessionEnded) return;
+            sessionEnded = true;
+
+            // Disable end button to prevent double-click
+            const endBtn = document.getElementById('end-btn');
+            if (endBtn) endBtn.disabled = true;
+
+            clearInterval(timerHandle);
+            stopAudioPlayback();
+
+            if (micStream) micStream.getTracks().forEach(t => t.stop());
+            if (scriptProc) { try { scriptProc.disconnect(); } catch (e) { } }
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                try { ws.close(1000, 'Interview ended'); } catch (e) { }
+            }
+
+            // 1. Show loading overlay: "Generating your report…"
+            showState('ending');
+            document.getElementById('ending-text').textContent = 'Saving conversation...';
+            _reportInterviewId = interviewId;
+
+            // (Messages are saved automatically by backend in voice mode, and on-send in text mode.)
+
+            document.getElementById('ending-text').textContent = 'Generating your report…';
+            await generateReport();
+        }
+
+        async function generateReport() {
+            // Backend may need time to retry rate-limited Gemini calls (up to ~90s)
+            const MAX_ATTEMPTS = 3;
+            const RETRY_DELAY = 20000; // 20 seconds between frontend retries
+            let generated = false;
+
+            for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+                const statusMsg = attempt === 1
+                    ? 'Generating your report…'
+                    : `Still generating… attempt ${attempt}/${MAX_ATTEMPTS} (AI may be rate-limited, please wait)`;
+                document.getElementById('ending-text').textContent = statusMsg;
+
+                try {
+                    const res = await fetch(`${API_BASE}/api/generate-report`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', ...NGROK_HEADERS },
+                        body: JSON.stringify({ interview_id: _reportInterviewId }),
+                    }).catch(() => { throw new Error('Server offline'); });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.status === 'generated') {
+                            generated = true;
+                            break;
+                        }
+                    } else {
+                        const errData = await res.json().catch(() => ({}));
+                        console.error(`[NUVOX] Report attempt ${attempt} failed:`, res.status, errData.detail || '');
+                    }
+                } catch (err) {
+                    console.error(`[NUVOX] Report attempt ${attempt} error:`, err);
+                }
+
+                if (attempt < MAX_ATTEMPTS) {
+                    document.getElementById('ending-text').textContent = `Waiting before retry… (${RETRY_DELAY / 1000}s)`;
+                    await new Promise(r => setTimeout(r, RETRY_DELAY));
+                }
+            }
+
+            if (!generated) {
+                document.getElementById('ending-text').textContent = 'Report generation failed — the AI is likely rate-limited. Please wait a minute and tap Retry, or go to Dashboard.';
+                document.getElementById('retry-btn-wrap').classList.remove('hidden');
+                // Still save to history so user doesn't lose their session
+                saveToHistory();
+                return;
+            }
+
+            document.getElementById('ending-text').textContent = 'Report ready!';
+            saveToHistory();
+            window.location.href = `report.html?id=${_reportInterviewId}`;
+        }
+
+        function retryReport() {
+            document.getElementById('retry-btn-wrap').classList.add('hidden');
+            document.getElementById('ending-text').textContent = 'Retrying report generation…';
+            generateReport();
+        }
+
+        function saveToHistory() {
+            try {
+                const persona = localStorage.getItem('nuvox_persona') || 'general';
+                const existing = JSON.parse(localStorage.getItem('nuvox_history') || '[]');
+                existing.push({
+                    interview_id: _reportInterviewId,
+                    persona: persona,
+                    date: new Date().toISOString(),
+                    score: null,   // Will be filled when user views report
+                });
+                localStorage.setItem('nuvox_history', JSON.stringify(existing));
+            } catch (e) {
+                console.warn('[NUVOX] Could not save to history:', e);
+            }
+        }
+
+        // ── Boot (show splash, don't auto-start) ──────────────────────────
+        showState('splash');
+    </script>
+
+
+</body>
+
+</html>

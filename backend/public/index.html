@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NUVOX — AI Mock Interview Platform</title>
+  <meta name="description"
+    content="Practice interviews with AI, get structured feedback, and improve your performance with NUVOX." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+  <nav class="navbar">
+    <a href="index.html" class="logo">
+      <div class="logo-icon">N</div><span>NUVOX</span>
+    </a>
+    <div class="navbar-links">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="resume-upload.html">New Interview</a>
+    </div>
+  </nav>
+
+  <div class="page-center">
+    <div class="landing-card glass-card animate-up">
+      <div class="brand">NUVOX</div>
+      <h1 class="hero">AI Powered Mock Interview Practice</h1>
+      <p class="subtitle">Practice with a real-sounding AI interviewer, receive structured feedback, and level up your
+        skills.</p>
+
+      <div class="feature-row">
+        <span class="badge badge-blue">7 Personas</span>
+        <span class="badge badge-blue">Live Voice</span>
+        <span class="badge badge-blue">Smart Report</span>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;align-items:stretch;">
+        <button class="btn-primary" id="start-btn" onclick="start()">Start Interview →</button>
+        <button class="btn-secondary" onclick="window.location.href='dashboard.html'">View Dashboard</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Clear any stale session on landing page load
+    localStorage.removeItem('nuvox_resume_id');
+    localStorage.removeItem('nuvox_interview_id');
+    localStorage.removeItem('nuvox_persona');
+
+    function start() {
+      window.location.href = 'resume-upload.html';
+    }
+  </script>
+</body>
+
+</html>
